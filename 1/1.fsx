@@ -70,10 +70,10 @@ let curry f = fun g -> fun h -> f (g, h)
 let uncurry f = fun (g, h) -> f g h
 
 // Exercise 1.12
-let empty (letter, pointValue : int) pos = (letter, pointValue)
+let empty (letter, pointValue : int) = function pos -> (letter, pointValue)
 
 // Exercise 1.13
-let add newPos (letter, pointValue) word pos =
+let add newPos (letter, pointValue) word = function pos ->
   if newPos = pos then (letter, pointValue)
   else word pos
   
