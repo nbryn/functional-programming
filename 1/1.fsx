@@ -20,16 +20,10 @@ let rec fib n =
     | n -> fib (n-1) + fib (n-2)
 
 // Exercise 1.5
-let rec fact =
- function
- | 0 -> 1
- | n -> n * fact(n-1)
- 
-let rec power =
- function
-
- | (x,0) -> 1.0
- | (x,n) -> x * power(x,n-1)
+// 1. (float * (int -> int))
+// 2. int
+// 3. float
+// 4. (float * int -> float) * (int -> int)
 
 // Exercise 1.6
 let dup s = s^s
@@ -56,7 +50,7 @@ let rec f =
 // Exercise 1.9
 // 1. int * int -> int
 // 2. Positive values of x
-// 3.
+// 3. f(2, 3) -> f(1, 6) -> 6
 // 4. f(x,y) might be called a function of two variables
 
 
