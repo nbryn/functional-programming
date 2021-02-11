@@ -11,10 +11,16 @@ let downto2 =
     | n -> [n .. -1 .. 1]
 
 // Exercise 2.2
-let removeOddIdx xs = 
-    xs |> List.mapi(fun index element -> element, index)
-       |> List.filter(fun (element, index) -> index % 2 = 0)
-       |> List.map fst
+// let removeOddIdx1 xs = 
+//    xs |> List.mapi(fun index element -> element, index)
+//       |> List.filter(fun (element, index) -> index % 2 = 0)
+//       |> List.map fst
+
+let rec removeOddIdx xs =
+    match xs with
+    | [] -> []
+    | (x) when xs.Length = 1 -> x
+    | (x :: y :: xy) -> x :: removeOddIdx xy
 
 // Exercise 2.3
 let rec combinePair =
@@ -52,3 +58,22 @@ let implodeRev = function (s : char list) -> String.Concat(Array.ofList(List.rev
 
 
 // Exercise 2.9
+let toUpper s = s |> explode1 |> List.map Char.ToUpper |> implode
+
+// Exercise 2.10
+let rec ack =
+    function
+    | (m, n) when m = 0 -> n+1
+    | (m, n) when m > 0 && n = 0 -> ack (m-1, 1)
+    | (m, n) when m > 0 && n > 0 -> ack (m-1, ack (m, n-1))
+    | _ -> failwithf "Invalid Arg"
+
+// Exercise 2.11
+let timeArg1 f = fun a ->
+ let start = System.DateTime.Now
+ let res = f (a)
+ let finish = System.DateTime.Now
+ sprintf "%d mins ago" (int (finish - start).TotalMinutes)
+ (res, finish - start)
+
+ // Exercise 2.12
