@@ -76,4 +76,49 @@ let timeArg1 f = fun a ->
  sprintf "%d mins ago" (int (finish - start).TotalMinutes)
  (res, finish - start)
 
- // Exercise 2.12
+// Exercise 2.12
+
+
+// Exercise 2.13
+type word = (char * int) list
+
+type squareFun = word -> int -> int -> int
+
+type square = (int * squareFun) list
+
+let hello : word = [('H', 4);('E', 1);('L', 1);('L', 1);('O', 1);]
+
+let suppe : word = [('S', 2);('U', 3);('P', 2);('P', 2);('E', 1);]
+
+// Exercise 2.14
+let singleLetterScore (word : word) pos = fun acc -> snd (word.[pos]) + acc 
+
+let doubleLetterScore (word : word) pos = fun acc -> 2 * snd (word.[pos]) + acc 
+
+let tripleLetterScore (word : word) pos = fun acc -> 3 * snd (word.[pos]) + acc 
+
+// Exercise 2.15
+let doubleWordScore:squareFun = fun word pos acc -> 2 * acc
+
+let tripleWordScore:squareFun = fun word pos acc -> 3 * acc
+
+// Exercise 2.16
+let containsNumbers2:squareFun = fun word pos acc ->
+  if (word |> List.exists (fun x -> Char.IsNumber(fst x))) 
+  then -(acc)
+  else acc
+
+// Exercise 2.17
+let SLS : square = [(0, singleLetterScore)]
+let DLS : square = [(0, doubleLetterScore)]
+let TLS : square = [(0, tripleLetterScore)]
+let DWS : square = SLS @ [(1, doubleWordScore)]
+let TWS : square = SLS @ [(1, tripleWordScore)]
+
+let calculatePoints (squareList : square list) = fun (word : word) ->
+    List.mapi (fun i square -> List.map (fun (prority, squareFun) -> (prority, squareFun word i) ) square) squareList
+    |> List.fold (fun list n -> List.append n list) []
+    |> List.sortBy (fun x -> fst x)
+    |> List.map (fun x -> snd x)
+    |> List.fold (fun f n -> f >> n) (fun x -> x)
+    |> fun x -> x 0
