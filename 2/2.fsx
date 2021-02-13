@@ -5,21 +5,16 @@ let downto1 = function n ->
     if n < 0 then []
     else [n .. -1 .. 1]
 
-let downto2 =
-    function
+let rec downto2 n =
+    match n with
     | n when n < 0 -> []
-    | n -> [n .. -1 .. 1]
+    | n -> n :: downto2 (n-1)
 
 // Exercise 2.2
-// let removeOddIdx1 xs = 
-//    xs |> List.mapi(fun index element -> element, index)
-//       |> List.filter(fun (element, index) -> index % 2 = 0)
-//       |> List.map fst
-
 let rec removeOddIdx xs =
     match xs with
     | [] -> []
-    | (x) when xs.Length = 1 -> x
+    | [x] -> [x]
     | (x :: y :: xy) -> x :: removeOddIdx xy
 
 // Exercise 2.3
@@ -46,15 +41,11 @@ let rec explode2 = function (s : string) ->
     | s -> s.Chars 0 :: explode2 (s.Substring 1)
 
 // Exercise 2.8
-//let implode = function (s : char list) -> List.foldBack (fun (acc : string) x  -> x + acc ) s ""
-
-//let implode = function (s : char list) -> s |> List.map string |> List.reduce (+)
-
-//let implodeRev = function (s : char list) -> s |> List.map string |> List.rev |> List.reduce (+)
-
 let implode = function (s : char list) -> String.Concat(Array.ofList(s))
-
 let implodeRev = function (s : char list) -> String.Concat(Array.ofList(List.rev s))
+
+let implode2 = function (s : char list) -> List.foldBack (fun x acc  -> string x + acc ) s ""
+let implodeRev2 (arr: char list) = List.fold (fun acc x -> string x + acc) "" arr
 
 
 // Exercise 2.9
@@ -77,7 +68,19 @@ let timeArg1 f = fun a ->
  (res, finish - start)
 
 // Exercise 2.12
+let downto32 f n e =
+        if n > 0 then
+            List.foldBack f [1..n] e
+        else e
 
+let rec downto3 f n e =
+        if n > 0 then
+            f n e |> downto3 f (n-1)
+        else e
+
+let fac n = downto3 (*) n 1
+
+let range g n = downto3 (fun x y -> (g x) :: y) n []
 
 // Exercise 2.13
 type word = (char * int) list
@@ -115,10 +118,10 @@ let TLS : square = [(0, tripleLetterScore)]
 let DWS : square = SLS @ [(1, doubleWordScore)]
 let TWS : square = SLS @ [(1, tripleWordScore)]
 
-let calculatePoints (squareList : square list) = fun (word : word) ->
-    List.mapi (fun i square -> List.map (fun (prority, squareFun) -> (prority, squareFun word i) ) square) squareList
-    |> List.fold (fun list n -> List.append n list) []
-    |> List.sortBy (fun x -> fst x)
-    |> List.map (fun x -> snd x)
-    |> List.fold (fun f n -> f >> n) (fun x -> x)
-    |> fun x -> x 0
+let calculatePoints (list : square list) = fun (word : word) -> 
+    list |> List.mapi (fun i square -> List.map (fun (prority, squareFun) -> (prority, squareFun word i) ) square)
+         |> List.fold (fun list n -> List.append n list) []
+         |> List.sortBy (fun x -> fst x)
+         |> List.map (fun x -> snd x)
+         |> List.fold (fun f n -> f >> n) (fun x -> x)
+         |> fun x -> x 0
