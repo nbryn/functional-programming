@@ -7,7 +7,7 @@ let downto1 = function n ->
 
 let rec downto2 n =
     match n with
-    | n when n < 0 -> []
+    | n when n <= 0 -> []
     | n -> n :: downto2 (n-1)
 
 // Exercise 2.2
@@ -29,8 +29,18 @@ type Complex = float * float
 
 let mkComplex first = function second -> Complex (first, second)
 
-let complexToPair = function (complex : Complex) -> (fst complex, snd complex)
+let complexToPair = function a -> (fst a, snd a)
 
+let (|*|) (a : Complex) (b : Complex) = Complex ((fst a * fst b) - (snd a * snd b), (snd a * fst b) + (fst a * snd b))
+
+let (|+|) (a : Complex) (b : Complex) = Complex (fst a + fst b, snd a + snd b)
+
+let (|-|) (a : Complex) (b : Complex) = Complex (fst a - fst b, snd a - snd b)
+
+let (|/|) (a : Complex) (b : Complex) = 
+    let first = (fst a * fst b + snd a * snd b) / (Math.Pow(fst b, 2.) + Math.Pow(snd b, 2.))
+    let second= (snd a * fst b - fst a * snd b) / (Math.Pow(fst b, 2.) + Math.Pow(snd b, 2.))
+    Complex (first, second)
 
 // Exercise 2.7
 let explode1 = function (s : string) -> Seq.toList s
@@ -45,7 +55,7 @@ let implode = function (s : char list) -> String.Concat(Array.ofList(s))
 let implodeRev = function (s : char list) -> String.Concat(Array.ofList(List.rev s))
 
 let implode2 = function (s : char list) -> List.foldBack (fun x acc  -> string x + acc ) s ""
-let implodeRev2 (arr: char list) = List.fold (fun acc x -> string x + acc) "" arr
+let implodeRev2 (arr : char list) = List.fold (fun acc x -> string x + acc) "" arr
 
 
 // Exercise 2.9
@@ -101,12 +111,12 @@ let doubleLetterScore (word : word) pos = fun acc -> 2 * snd (word.[pos]) + acc
 let tripleLetterScore (word : word) pos = fun acc -> 3 * snd (word.[pos]) + acc 
 
 // Exercise 2.15
-let doubleWordScore:squareFun = fun word pos acc -> 2 * acc
+let doubleWordScore : squareFun = fun word pos acc -> 2 * acc
 
-let tripleWordScore:squareFun = fun word pos acc -> 3 * acc
+let tripleWordScore : squareFun = fun word pos acc -> 3 * acc
 
 // Exercise 2.16
-let containsNumbers2:squareFun = fun word pos acc ->
+let containsNumbers : squareFun = fun word pos acc ->
   if (word |> List.exists (fun x -> Char.IsNumber(fst x))) 
   then -(acc)
   else acc
