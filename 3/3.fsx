@@ -158,11 +158,30 @@ let tripleLetterScore = stmntToSquareFun (Ass ("_result_", arithTripleLetterScor
 let doubleWordScore = stmntToSquareFun (Ass ("_result_", arithDoubleWordScore))
 let tripleWordScore = stmntToSquareFun (Ass ("_result_", arithTripleWordScore))
 
-let containsNumbers = stmntToSquareFun (Seq (Ass ("_result_", V "_acc_"),
-    While (V "i" .<. WL,
-    ITE (IsDigit (CV (V "i")), Seq (
-    Ass ("_result_", V "_result_" .*. N -1),
-    Ass ("i", WL)),
-    Ass ("i", V "i" .+. N 1)))))
+let containsNumbers = 
+    stmntToSquareFun 
+        (Seq (Ass ("_result_", V "_acc_"),
+            While (V "i" .<. WL,
+                ITE (IsDigit (CV (V "i")), 
+                    Seq (
+                        Ass ("_result_", V "_result_" .*. N -1),
+                        Ass ("i", WL)),
+                    Ass ("i", V "i" .+. N 1)))))
 
 // Exercise 3.9
+type Square2 = (int * stmnt) list
+
+let SLS = [(0, Ass ("_result_", arithSingleLetterScore))]
+let DLS = [(0, Ass ("_result_", arithDoubleLetterScore))]
+let TLS = [(0, Ass ("_result_", arithTripleLetterScore))]
+let DWS = [(1, Ass ("_result_", arithDoubleWordScore))] @ SLS
+let TWS = [(1, Ass ("_result_", arithTripleWordScore))] @ SLS
+
+let calculatePoints2 (list : Square2 list) = fun (w : Word) -> 
+    list |> List.mapi (fun i square -> List.map (fun (priority, stm) -> (priority, stmntToSquareFun stm w i)) square)
+         |> List.fold (fun list n -> List.append n list) []
+         |> List.sortBy (fst)
+         |> List.map (snd)
+         |> List.fold (( >> )) (id)
+         |> fun x -> x 0
+
