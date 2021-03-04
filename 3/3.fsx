@@ -130,7 +130,7 @@ let rec boolEval (b : bExp) (w : Word) = function (s : Map<string, int>) ->
     | IsLetter a -> System.Char.IsLetter (charEval a w s)
     | IsDigit a -> System.Char.IsDigit (charEval a w s)
 
-// Exercise 3.6 & 3.7
+// Exercise 3.6
 type stmnt =
  | Skip (* does nothing *)
  | Ass of string * aExp (* variable assignment *)
@@ -146,7 +146,6 @@ let rec evalStmnt (stm : stmnt) (w : Word) = function (s : Map<string, int>) ->
     | ITE(guard, stm1, stm2) -> if (boolEval guard w s) then evalStmnt stm1 w s else evalStmnt stm2 w s
     | While(guard, stm) -> if (boolEval guard w s) then evalStmnt stm w s |> evalStmnt (While(guard, stm)) w else s
 
-// Exercise 3.8
 type SquareFun = Word -> int -> int -> int
 
 let stmntToSquareFun (stm : stmnt) (w : Word) pos = function acc ->
@@ -168,7 +167,7 @@ let containsNumbers =
                         Ass ("i", WL)),
                     Ass ("i", V "i" .+. N 1)))))
 
-// Exercise 3.9
+// Exercise 3.7
 type Square2 = (int * stmnt) list
 
 let SLS = [(0, Ass ("_result_", arithSingleLetterScore))]
