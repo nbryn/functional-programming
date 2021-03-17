@@ -26,8 +26,6 @@ let foldBack folder lst acc =
     go lst acc id
 
 // Exercise 5.4
-// Define an iterative function factC : int -> int that uses continuations and compare the
-// running time between the two. Which solution is faster and why?
 let factC x =
     let rec go x c =
         match x with
