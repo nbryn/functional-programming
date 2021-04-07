@@ -107,7 +107,7 @@
         | Declare s              -> declare s
         | Ass(a, b)              -> arithEval b >>= update a
         | Skip                   -> ret ()
-        | Seq(stm1, stm2)        -> stmntEval stm1 >>= (fun _ -> stmntEval stm2 )
+        | Seq(stm1, stm2)        -> stmntEval stm1 >>>= stmntEval stm2
         | ITE(guard, stm1, stm2) -> boolEval guard >>= (fun x -> if x then push >>>= stmntEval stm1 >>>= pop else push >>>= stmntEval stm2 >>>= pop)
         | While(guard, stm)      -> boolEval guard >>= (fun x -> if x then push >>>= stmntEval stm >>>= pop >>= fun _ -> push >>>= stmntEval (While(guard, stm)) else ret ())
 
@@ -138,23 +138,17 @@
     let stmntToSquareFun (stm : stm) =
          fun w pos acc -> 
             mkState [("_pos_", pos); ("_acc_", acc); ("_result_", 0)] w ["_pos_"; "_acc_"; "_result_"]
-            |> (fun s -> 
-                stmntEval stm >>>= lookup "_result_" |> evalSM s 
-            )
+            |> fun s -> stmntEval stm >>>= lookup "_result_" |> evalSM s
 
 
     type coord = int * int
 
     type boardFun = coord -> Result<squareFun option, Error> 
 
-    let stmntToBoardFun stm m =
+    let stmntToBoardFun stm (m : Map<int, squareFun>) : boardFun =
         fun (c : coord) ->
         mkState [("_x_", fst c); ("_y_", snd c); ("_result_", 0)] [] ["_x_"; "_y_"; "_result_"]
-        |> (fun s -> 
-                lookup "_result_" >>= (fun x -> match Map.tryFind x m with
-                                                | Some sf -> Success (Some sf)
-                                                | None -> Success None
-                ))
+        |> fun s -> stmntEval stm >>>= lookup "_result_" >>= (fun x -> ret (Map.tryFind x m)) |> evalSM s
 
     type board = {
         center        : coord
@@ -162,5 +156,17 @@
         squares       : boardFun
     }
 
-    let mkBoard c defaultSq boardStmnt ids = failwith "Not implemented"
+    let mkBoard (c : coord) defaultSq boardStmnt (ids : (int * stm) list) : board = 
+        {
+         center = c
+         defaultSquare = stmntToSquareFun defaultSq
+         squares = ids |> List.map (fun x -> (fst x, stmntToSquareFun (snd x))) |> Map.ofList |> stmntToBoardFun boardStmnt
+        }
+
+        
+
+
+
+        
+        
     

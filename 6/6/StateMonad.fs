@@ -71,33 +71,15 @@
               | Some v -> Success (v, s)
               | None   -> Failure (VarNotFound x))
 
-    let update1 (var : string) (value : int) : SM<unit> =
-        let rec aux =
-            function
-            | []      -> None
-            | m :: ms -> 
-                match Map.tryFind var m with
-                | Some v -> Some (Map.add var value m)
-                | None   -> aux ms
-
-        S (fun s -> 
-              match aux (s.vars) with
-              | Some v -> Success ((), {s with vars = v :: s.vars})
-              | None   -> Failure (VarNotFound var)) 
-
     let update (var : string) (value : int) : SM<unit> =
-        let rec aux (t : Map<string, int> list) =
-            t |> List.tryFind (fun x -> Map.containsKey var x) |> fun x -> if x.IsNone 
-                                                                           then None 
-                                                                           else 
-                                                                           let h = Map.add var value x.Value :: []
-                                                                           List.filter (fun h -> not (Map.containsKey var h)) t
-                                                                                |> fun u -> Some (u :: [h])
-
-            
+        let rec aux (s : Map<string, int> list) =
+            match List.tryFindIndex (fun x -> Map.containsKey var x) s with
+            | Some t -> List.mapi (fun i m -> if i = t then Map.add var value m else m) s |> Some
+            | None   -> None
+           
         S (fun s -> 
               match aux (s.vars) with
-              | Some v -> Success ((), {s with vars = List.collect (id) v})
+              | Some v -> Success ((), {s with vars = v})
               | None   -> Failure (VarNotFound var))
 
     let declare (var : string) : SM<unit> =
