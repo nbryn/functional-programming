@@ -36,8 +36,8 @@
     let pletter        = satisfy (fun x -> System.Char.IsLetter x)
     let palphanumeric  = satisfy (fun x -> System.Char.IsLetterOrDigit x)
 
-    let spaces         = many (pstring " ")
-    let spaces1        = many1 (pstring " ")
+    let spaces         = many (pchar ' ')
+    let spaces1        = many1 (pchar ' ')
 
     let (.>*>.) (p1 : Parser<'a>) (p2 : Parser<'b>) = p1 .>> spaces .>>. p2
     let (.>*>) (p1 : Parser<'a>) (p2 : Parser<'b>)  = p1 .>> spaces .>> p2
@@ -45,29 +45,48 @@
 
     let parenthesise (p : Parser<'a>) = (((pstring "(" >>. spaces) >>. p) .>> spaces) .>> pstring ")"
 
-    let pid = pstring "not implemented"
+    let convertToString (l : char list) = List.ofSeq l |> List.toArray |> System.String
+
+    let pid = (pletter <|> pchar ('_')) .>>. (many palphanumeric .>>. many (pchar '_')) |>> fun (x, (y, z)) -> convertToString (x::y@z)
 
     
-    let unop _ = failwith "not implemented"
-    let binop _ p1 p2 = p1 .>>. p2 // incorrect (not implemented)
+    let unop op a = (op .>> spaces) >>. a
+    let binop op p1 p2 = (((p1 .>> spaces) .>> op) .>> spaces) .>>. p2
 
     let TermParse, tref = createParserForwardedToRef<aExp>()
     let ProdParse, pref = createParserForwardedToRef<aExp>()
     let AtomParse, aref = createParserForwardedToRef<aExp>()
 
+    let TParse, href = createParserForwardedToRef<cExp>()
+
     let AddParse = binop (pchar '+') ProdParse TermParse |>> Add <?> "Add"
-    do tref := choice [AddParse; ProdParse]
+    let SubParse = binop (pchar '-') ProdParse TermParse |>> Sub <?> "Sub"
+    do tref := choice [AddParse; SubParse; ProdParse]
 
     let MulParse = binop (pchar '*') AtomParse ProdParse |>> Mul <?> "Mul"
-    do pref := choice [MulParse; AtomParse]
+    let DivParse = binop (pchar '/') AtomParse ProdParse |>> Div <?> "Div"
+    let ModParse = binop (pchar '%') AtomParse ProdParse |>> Mod <?> "Mod"
+    do pref := choice [MulParse; DivParse; ModParse; AtomParse]
 
-    let NParse   = pint32 |>> N <?> "Int"
-    let ParParse = parenthesise TermParse
-    do aref := choice [NParse; ParParse]
+    let NParse         = pint32 |>> N <?> "Int"
+    let VParse         = pid |>> V <?> "String"
+    let PVParse        = unop (pstring "pointValue") AtomParse |>> PV <?> "PV"
+    let NegParse       = pchar '-' >>. pint32 |>> fun x -> Mul (N -1, N x)
+    let CharToIntParse = pstring "charToInt" .>>. spaces >>. parenthesise TParse |>> CharToInt <?> "CharToInt"
+    let ParParse       = parenthesise TermParse
+    do aref := choice [CharToIntParse; NegParse; PVParse;  VParse; NParse; ParParse]
 
-    let AexpParse = TermParse 
+    let AexpParse = TermParse
 
-    let CexpParse = pstring "not implemented"
+    let CParse         = pchar ''' >>. (pletter <|> pchar ' ') .>> pchar ''' |>> C <?> "C"
+    let ToLowerParse   = pstring "toLower" .>>. spaces >>. parenthesise TParse |>> ToLower <?> "ToLower"
+    let ToUpperParse   = pstring "toUpper" .>>. spaces >>. parenthesise TParse  |>> ToUpper <?> "ToUpper"
+    let IntToCharParse = pstring "intToChar" .>>. spaces >>. parenthesise AtomParse |>> IntToChar <?> "IntToChar"
+    let CVParse        = unop (pstring "charValue") AtomParse |>> CV <?> "CV"
+    let PrParse        = parenthesise TParse
+    do href := choice [IntToCharParse; ToLowerParse; ToUpperParse; CVParse; CParse; PrParse]
+
+    let CexpParse = TParse
 
     let BexpParse = pstring "not implemented"
 
