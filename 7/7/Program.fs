@@ -154,13 +154,6 @@ let main argv =
          declare result;
          if (arg >= 0) then {
              declare acc;
-             acc := 1;
-             x := 0;
-             while (arg <> x) do {
-                 x := x + 1;
-                 acc := acc * x
-             };
-             result := acc
          }"
     
     run stmntParse factorial |> printfn "%A"
