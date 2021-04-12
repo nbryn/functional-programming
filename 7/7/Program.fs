@@ -149,7 +149,7 @@ let main argv =
     run stmntParse "while (true) do {x5 := 0} " |> printfn "%A"
 
     let factorial = 
-         "declare arg;
+          "declare arg;
    arg := 10;
    declare result;
    if (arg >= 0) then {
@@ -159,7 +159,8 @@ let main argv =
        while (arg <> x) do {
            x := x + 1;
            acc := acc * x
-       }
+       };
+       result := acc
    }"
     
     run stmntParse factorial |> printfn "%A"

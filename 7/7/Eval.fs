@@ -4,7 +4,7 @@
 
     (* Code for testing *)
 
-    let hello = [(* INSERT YOUR DEFINITON OF HELLO HERE.*)] 
+    let hello = [('H', 4);('E', 1);('L', 1);('L', 1);('O', 1);] 
     let state = mkState [("x", 5); ("y", 42)] hello ["_pos_"; "_result_"]
     let emptyState = mkState [] [] []
     
@@ -60,12 +60,38 @@
     let (.<=.) a b = a .<. b .||. ~~(a .<>. b)
     let (.>=.) a b = ~~(a .<. b)                (* numeric greater than or equal to *)
     let (.>.) a b = ~~(a .=. b) .&&. (a .>=. b) (* numeric greater than *)    
+   
+    let rec arithEval (a : aExp) : SM<int> =  
+        match a with
+        | WL          -> wordLength
+        | N a         -> ret (a)
+        | V exp       -> lookup exp
+        | PV a        -> arithEval a >>= (fun t -> pointValue t)        
+        | Add(a, b)   -> arithEval a >>= (fun t -> arithEval b >>= (fun x -> ret (t + x)))
+        | Sub(a, b)   -> arithEval a >>= (fun t -> arithEval b >>= (fun x -> ret (t - x)))
+        | Mul(a, b)   -> arithEval a >>= (fun t -> arithEval b >>= (fun x -> ret (t * x)))
+        | Div(a, b)   -> arithEval a >>= (fun t -> arithEval b >>= (fun x -> if x = 0 then fail (DivisionByZero) else ret (t / x)))
+        | Mod(a, b)   -> arithEval a >>= (fun t -> arithEval b >>= (fun x -> if x = 0 then fail (DivisionByZero) else ret (t % x)))
+        | CharToInt a -> charEval a >>= (fun x -> ret (int x))   
 
-    let arithEval a : SM<int> = failwith "Not implemented"      
+    and charEval (c : cExp) : SM<char> = 
+        match c with
+        | C a         -> ret (a)
+        | CV a        -> arithEval a >>= characterValue
+        | ToUpper a   -> charEval a >>= (fun x -> ret (System.Char.ToUpper x))
+        | ToLower a   -> charEval a >>= (fun x -> ret (System.Char.ToLower x))
+        | IntToChar a -> arithEval a >>= (fun x -> ret (char x))      
 
-    let charEval c : SM<char> = failwith "Not implemented"      
-
-    let boolEval b : SM<bool> = failwith "Not implemented"
+    let rec boolEval (c : bExp) : SM<bool> =
+        match c with
+        | TT            -> ret (true)
+        | FF            -> ret (false)
+        | AEq(a, b)     -> arithEval a >>= (fun x -> arithEval b >>= (fun y -> ret (x = y)))
+        | ALt(a, b)     -> arithEval a >>= (fun x -> arithEval b >>= (fun y -> ret (x < y)))
+        | Not(a)        -> boolEval a >>= (fun x -> ret (not x))
+        | Conj(a, b)    -> boolEval a >>= (fun x -> boolEval b >>= (fun y -> ret (x && y)))
+        | IsLetter(a)   -> charEval a >>= (fun x -> ret (System.Char.IsLetter x))  
+        | IsDigit(a)    -> charEval a >>= (fun x -> ret (System.Char.IsDigit x))
 
 
     type stm =                (* statements *)
@@ -76,7 +102,14 @@
     | ITE of bExp * stm * stm (* if-then-else statement *)
     | While of bExp * stm     (* while statement *)
 
-    let rec stmntEval stmnt : SM<unit> = failwith "Not implemented"
+    let rec stmntEval (stmnt : stm) : SM<unit> =
+        match stmnt with
+        | Declare s              -> declare s
+        | Ass(a, b)              -> arithEval b >>= update a
+        | Skip                   -> ret ()
+        | Seq(stm1, stm2)        -> stmntEval stm1 >>>= stmntEval stm2
+        | ITE(guard, stm1, stm2) -> boolEval guard >>= (fun x -> if x then push >>>= stmntEval stm1 >>>= pop else push >>>= stmntEval stm2 >>>= pop)
+        | While(guard, stm)      -> boolEval guard >>= (fun x -> if x then push >>>= stmntEval stm >>>= pop >>= fun _ -> push >>>= stmntEval (While(guard, stm)) else ret ())
 
 (* Part 3 (Optional) *)
 
@@ -103,13 +136,19 @@
 
     // Refactor your implementation from Assignment 6 to remove the Result type and return 0 on failure.
     // Details are in the assignment.
-    let stmntToSquareFun stm = failwith "Not implemented"
-
-    type coord = int * int
-
-    type boardFun = coord -> squareFun option
-
+    let stmntToSquareFun (stm : stm) =
+         fun w pos acc -> 
+            mkState [("_pos_", pos); ("_acc_", acc); ("_result_", 0)] w ["_pos_"; "_acc_"; "_result_"]
+            |> fun s -> stmntEval stm >>>= lookup "_result_" |> fun x -> match evalSM s x with
+                                                                         | Success (r) -> r
+                                                                         | Failure (_) -> 0
     // Refactor your implementation from Assignment 6 to remove the Result type and return None on failure.
     // Also, make sure the funciton is polymorphic on the return type and the lookup map.
     // Details in the assignment.
-    let stmntToBoardFun stm m = failwith "Not implemented"
+    let stmntToBoardFun (stm : stm) (m : Map<int, 'a>) =
+        fun (x,y) ->
+        mkState [("_x_", x); ("_y_", y); ("_result_", 0)] [] ["_x_"; "_y_"; "_result_"]
+        |> fun s -> stmntEval stm >>>= lookup "_result_" >>= (fun x -> ret (Map.tryFind x m)) |>
+        fun m -> match evalSM s m with
+                 | Success (r) -> r
+                 | Failure (_) -> None

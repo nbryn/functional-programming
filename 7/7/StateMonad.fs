@@ -45,13 +45,17 @@
     let push : SM<unit> = 
         S (fun s -> Success ((), {s with vars = Map.empty :: s.vars}))
 
-    let pop : SM<unit> = failwith "Not implemented"      
+    let pop : SM<unit> = 
+        S (fun s -> Success ((), {s with vars = match s.vars with 
+                                                | _ :: xs -> xs}))      
 
-    let wordLength : SM<int> = failwith "Not implemented"      
+    let wordLength : SM<int> = S (fun s -> Success (s.word.Length, s))       
 
-    let characterValue (pos : int) : SM<char> = failwith "Not implemented"      
+    let characterValue (pos : int) : SM<char> = 
+        S (fun s -> if (pos < 0 || pos > s.word.Length - 1) then Failure (IndexOutOfBounds pos) else Success (fst s.word.[pos], s) )
 
-    let pointValue (pos : int) : SM<int> = failwith "Not implemented"      
+    let pointValue (pos : int) : SM<int> = 
+        S (fun s -> if (pos < 0 || pos > s.word.Length - 1) then Failure (IndexOutOfBounds pos) else Success (snd s.word.[pos], s) )     
 
     let lookup (x : string) : SM<int> = 
         let rec aux =
@@ -67,8 +71,23 @@
               | Some v -> Success (v, s)
               | None   -> Failure (VarNotFound x))
 
-    let declare (var : string) : SM<unit> = failwith "Not implemented"   
-    let update (var : string) (value : int) : SM<unit> = failwith "Not implemented"      
+    let update (var : string) (value : int) : SM<unit> =
+        let rec aux (s : Map<string, int> list) =
+            match List.tryFindIndex (fun x -> Map.containsKey var x) s with
+            | Some t -> List.mapi (fun i m -> if i = t then Map.add var value m else m) s |> Some
+            | None   -> None
+           
+        S (fun s -> 
+              match aux (s.vars) with
+              | Some v -> Success ((), {s with vars = v})
+              | None   -> Failure (VarNotFound var))
+
+    let declare (var : string) : SM<unit> =
+        S (fun s ->
+            if s.reserved.Contains var then Failure (ReservedName var)
+            else if Map.containsKey var s.vars.[0] then Failure (VarExists var)
+            else Map.add var 0 s.vars.[0] |> fun x -> Success ((), {s with vars = x :: s.vars})
+          )        
               
 
     

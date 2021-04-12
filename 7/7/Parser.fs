@@ -110,20 +110,21 @@
     let BexpParse = BTermParse
 
     let StmTermParse, stmref = createParserForwardedToRef<stm>()
-    let StmProdParse, stmbref = createParserForwardedToRef<stm>()
+    let StmProdParse, stmpref = createParserForwardedToRef<stm>()
+    let StmAtomParse, stmaref = createParserForwardedToRef<stm>()
+
+    let SeqParse = binop (many whitespaceChar >>. pchar ';' .>> many whitespaceChar) StmProdParse StmTermParse |>> Seq
+    do stmref := choice [SeqParse; StmProdParse] 
 
     let SkipParse  = pstring "" |>> fun _ -> Skip
-    let SeqParse   = binop (many whitespaceChar >>. pchar ';' .>> many whitespaceChar) StmProdParse StmTermParse |>> Seq
     let ITParse    = ((((((((((many whitespaceChar >>. pif) .>> spaces) >>. BProdParse) .>> spaces) .>> pthen) .>> spaces ) .>> pchar '{') .>> many whitespaceChar .>>. StmTermParse) .>> many whitespaceChar) .>> pchar '}') .>> many whitespaceChar .>>. SkipParse |>> fun ((x, y), z) -> ITE (x, y, z)
-    let ITEParse   = ((((((((((((((many whitespaceChar >>. pif) .>> spaces) >>. BProdParse) .>> spaces) .>> pthen) .>> spaces) .>> pchar '{') .>> many whitespaceChar .>>. StmTermParse) .>> many whitespaceChar) .>> pchar '}') .>> many whitespaceChar) .>> pelse) .>> spaces) .>> pchar '{') .>> spaces .>>. StmProdParse .>> spaces .>> pchar '}' |>> fun ((x, y), z) -> ITE (x, y, z)
+    let ITEParse   = ((((((((((((((many whitespaceChar >>. pif) .>> spaces) >>. BProdParse) .>> spaces) .>> pthen) .>> spaces) .>> pchar '{') .>> many whitespaceChar .>>. StmTermParse) .>> many whitespaceChar) .>> pchar '}') .>> many whitespaceChar) .>> pelse) .>> spaces) .>> pchar '{') .>> spaces .>>. StmTermParse .>> spaces .>> pchar '}' |>> fun ((x, y), z) -> ITE (x, y, z)
     let WhileParse = ((((((((many whitespaceChar >>. pwhile) .>> spaces) >>. BProdParse) .>> spaces) .>> pdo) .>> spaces) .>> pchar '{') .>> many whitespaceChar .>>. StmTermParse) .>> many whitespaceChar .>> pchar '}' |>> While
-
-    do stmref := choice [SeqParse; WhileParse; ITEParse; ITParse; StmProdParse;]  
+    do stmpref := choice [ITEParse; ITParse; WhileParse; StmAtomParse;] 
 
     let AssParse     = (((many whitespaceChar >>. pid .>> many whitespaceChar) .>> pstring ":=") .>> spaces) .>>. TermParse |>> fun (x, y) -> Ass (string x, y)
     let DeclareParse = many whitespaceChar .>> pdeclare .>> spaces1 >>. pid |>> Declare
-    
-    do stmbref := choice [DeclareParse; AssParse;] 
+    do stmaref := choice [DeclareParse; AssParse;] 
 
     let stmntParse = StmTermParse
 
@@ -145,9 +146,9 @@
     type word   = (char * int) list
     type square = Map<int, word -> int -> int -> int>
 
-    let parseSquareFun _ = failwith "not implemented"
+    let parseSquareFun (sqp : squareProg) : square    = Map.map (fun _ y -> stmntToSquareFun (getSuccess (run stmntParse y))) sqp
 
-    let parseBoardFun _ = failwith "not implemented"
+    let parseBoardFun (s : string) (m : Map<int, 'a>) = getSuccess (run stmntParse s) |> fun x -> stmntToBoardFun x m
 
     type boardFun = coord -> square option
     type board = {
@@ -156,5 +157,10 @@
         squares       : boardFun
     }
 
-    let parseBoardProg (bp : boardProg) = failwith "not implemented"
+    let parseBoardProg (bp : boardProg) : board = 
+          {
+         center = bp.center
+         defaultSquare = parseSquareFun (Map.find bp.usedSquare bp.squares)
+         squares = Map.map (fun _ y -> parseSquareFun y) bp.squares |> fun x -> parseBoardFun bp.prog x
+        }
 
