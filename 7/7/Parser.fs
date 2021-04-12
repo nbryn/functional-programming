@@ -105,7 +105,7 @@
     let GreaterParse        = binop (pchar '>') AtomParse AtomParse |>> fun x -> Conj (Not (AEq x), Not (ALt x))
     let GreaterOrEqualParse = binop (pstring ">=") AtomParse AtomParse |>> fun x -> Not (ALt x)
     let LessOrEqualParse    = binop (pstring "<=") AtomParse AtomParse |>> fun x -> Not (Conj ((Not (ALt x)), Not (Not (Not (AEq x)))))
-    do bpref := choice [PrrParse; NotParse; LessOrEqualParse; TrueParse; FalseParse; EqualParse; LessParse; GreaterParse; GreaterOrEqualParse; ConParse; DisParse]
+    do bpref := choice [PrrParse; NotParse; LessOrEqualParse; TrueParse; FalseParse; EqualParse; NotEqualParse; LessParse; GreaterParse; GreaterOrEqualParse; ConParse; DisParse]
 
     let BexpParse = BTermParse
 
@@ -114,13 +114,13 @@
 
     let SkipParse  = pstring "" |>> fun _ -> Skip
     let SeqParse   = binop (many whitespaceChar >>. pchar ';' .>> many whitespaceChar) StmProdParse StmTermParse |>> Seq
-    let ITParse    = (((((((((((many whitespaceChar >>. pif) .>> spaces) >>. BProdParse) .>> spaces) .>> pthen) .>> many whitespaceChar) .>> pchar '{') .>>. StmProdParse) .>> many whitespaceChar) .>> pchar '}') .>> many whitespaceChar) .>>. SkipParse |>> fun ((x, y), z) -> ITE (x, y, z)
-    let ITEParse   = (((((((((((((((many whitespaceChar >>. pif) .>> spaces) >>. BProdParse) .>> spaces) .>> pthen) .>> many whitespaceChar) .>> pchar '{') .>>. StmProdParse) .>> many whitespaceChar) .>> pchar '}') .>> many whitespaceChar) .>> pelse) .>> spaces) .>> pchar '{') .>> spaces) .>>. StmProdParse .>> spaces .>> pchar '}' |>> fun ((x, y), z) -> ITE (x, y, z)
-    let WhileParse = (((((((((many whitespaceChar >>. pwhile) .>> spaces) >>. BProdParse) .>> spaces) .>> pdo) .>> many whitespaceChar) .>> pchar '{') .>>. StmProdParse) .>> many whitespaceChar) .>> pchar '}' |>> While
+    let ITParse    = ((((((((((many whitespaceChar >>. pif) .>> spaces) >>. BProdParse) .>> spaces) .>> pthen) .>> spaces ) .>> pchar '{') .>> many whitespaceChar .>>. StmTermParse) .>> many whitespaceChar) .>> pchar '}') .>> many whitespaceChar .>>. SkipParse |>> fun ((x, y), z) -> ITE (x, y, z)
+    let ITEParse   = ((((((((((((((many whitespaceChar >>. pif) .>> spaces) >>. BProdParse) .>> spaces) .>> pthen) .>> spaces) .>> pchar '{') .>> many whitespaceChar .>>. StmTermParse) .>> many whitespaceChar) .>> pchar '}') .>> many whitespaceChar) .>> pelse) .>> spaces) .>> pchar '{') .>> spaces .>>. StmProdParse .>> spaces .>> pchar '}' |>> fun ((x, y), z) -> ITE (x, y, z)
+    let WhileParse = ((((((((many whitespaceChar >>. pwhile) .>> spaces) >>. BProdParse) .>> spaces) .>> pdo) .>> spaces) .>> pchar '{') .>> many whitespaceChar .>>. StmTermParse) .>> many whitespaceChar .>> pchar '}' |>> While
 
-    do stmref := choice [SeqParse; ITEParse; ITParse; WhileParse; StmProdParse] 
+    do stmref := choice [SeqParse; WhileParse; ITEParse; ITParse; StmProdParse;]  
 
-    let AssParse     = (((many whitespaceChar >>. pid .>> many whitespaceChar) .>> pstring ":=") .>> spaces) .>>. AtomParse |>> fun (x, y) -> Ass (string x, y)
+    let AssParse     = (((many whitespaceChar >>. pid .>> many whitespaceChar) .>> pstring ":=") .>> spaces) .>>. TermParse |>> fun (x, y) -> Ass (string x, y)
     let DeclareParse = many whitespaceChar .>> pdeclare .>> spaces1 >>. pid |>> Declare
     
     do stmbref := choice [DeclareParse; AssParse;] 
