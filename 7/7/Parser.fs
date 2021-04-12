@@ -9,8 +9,8 @@
 
     *)
 
-    open JParsec.TextParser             // Example parser combinator library. Use for CodeJudge.
-    // open FParsecLight.TextParser     // Industrial parser-combinator library. Use for Scrabble Project.
+    //open JParsec.TextParser             // Example parser combinator library. Use for CodeJudge.
+    open FParsecLight.TextParser     // Industrial parser-combinator library. Use for Scrabble Project.
     
     let pIntToChar  = pstring "intToChar"
     let pPointValue = pstring "pointValue"
