@@ -148,7 +148,7 @@ let main argv =
     run stmntParse "if (x < y) then { x := 5 }" |> printfn "%A"
     run stmntParse "while (true) do {x5 := 0} " |> printfn "%A"
 
-    let factorial = 
+    let factorial1 = 
           "declare arg;
    arg := 10;
    declare result;
@@ -162,6 +162,14 @@ let main argv =
        };
        result := acc
    }"
+
+    let factorial = 
+       "declare xabs;
+   declare yabs;
+   if (_x_ < 0) then { xabs := _x_ * -1 } else { xabs := _x_ };
+   if (_y_ < 0) then { yabs := _y_ * -1 } else { yabs := _y_ };
+   if ((xabs = 0 /\ (yabs = 7)) \/ 
+   (xabs = 7 /\ (yabs = 0 \/ yabs = 7))) then { _result_ := 4 }"
     
     run stmntParse factorial |> printfn "%A"
 

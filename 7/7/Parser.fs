@@ -9,8 +9,8 @@
 
     *)
 
-    //open JParsec.TextParser             // Example parser combinator library. Use for CodeJudge.
-    open FParsecLight.TextParser     // Industrial parser-combinator library. Use for Scrabble Project.
+    open JParsec.TextParser             // Example parser combinator library. Use for CodeJudge.
+    //open FParsecLight.TextParser     // Industrial parser-combinator library. Use for Scrabble Project.
     
     let pIntToChar  = pstring "intToChar"
     let pPointValue = pstring "pointValue"
@@ -78,35 +78,42 @@
 
     let AexpParse = TermParse
 
+    let PrParse        = parenthesise TParse
     let CParse         = pchar ''' >>. (pletter <|> pchar ' ') .>> pchar ''' |>> C <?> "C"
-    let ToLowerParse   = pToLower .>>. spaces >>. parenthesise TParse |>> ToLower <?> "ToLower"
-    let ToUpperParse   = pToUpper .>>. spaces >>. parenthesise TParse  |>> ToUpper <?> "ToUpper"
+    let ToLowerParse   = pToLower .>>. spaces >>. PrParse |>> ToLower <?> "ToLower"
+    let ToUpperParse   = pToUpper .>>. spaces >>. PrParse  |>> ToUpper <?> "ToUpper"
     let IntToCharParse = pIntToChar .>>. spaces >>. parenthesise AtomParse |>> IntToChar <?> "IntToChar"
     let CVParse        = unop (pCharValue) AtomParse |>> CV <?> "CV"
-    let PrParse        = parenthesise TParse
+   
     do href := choice [IntToCharParse; ToLowerParse; ToUpperParse; CVParse; CParse; PrParse]
 
     let CexpParse = TParse
 
     let BTermParse, btref = createParserForwardedToRef<bExp>()
     let BProdParse, bpref = createParserForwardedToRef<bExp>()
+    let BAtomParse, baref = createParserForwardedToRef<bExp>()
 
-    let ConParse = binop (pstring "/\\") BProdParse BTermParse |>> Conj <?> "Conj"
-    let DisParse = binop (pstring "\\/") BProdParse BTermParse |>> fun (x, y) -> Not (Conj (Not x, Not y))
+    let TrueParse           = pTrue |>> fun _ -> TT
+    let FalseParse          = pFalse |>> fun _ -> FF
+    let NotParse            = unop (pchar '~') BTermParse |>> Not <?> "Not"
+
+    let ConParse = binop (pstring "/\\" .>> many whitespaceChar) BProdParse BTermParse |>> Conj <?> "Conj"
+    let DisParse = binop (pstring "\\/" .>> many whitespaceChar) BProdParse BTermParse |>> fun (x, y) -> Not (Conj (Not x, Not y))
     do btref := choice [ConParse; DisParse; BProdParse]
 
     let PrrParse            = parenthesise BTermParse
-    let NotParse            = unop (pchar '~') BTermParse |>> Not <?> "Not"
-    let TrueParse           = pTrue |>> fun _ -> TT
-    let FalseParse          = pFalse |>> fun _ -> FF
+   
     let EqualParse          = binop (pchar '=') AtomParse AtomParse |>> AEq <?> "AEq"
     let NotEqualParse       = binop (pstring "<>") AtomParse AtomParse |>> fun x -> Not (AEq x)
     let LessParse           = binop (pchar '<') AtomParse AtomParse |>> ALt <?> "ALt"
     let GreaterParse        = binop (pchar '>') AtomParse AtomParse |>> fun x -> Conj (Not (AEq x), Not (ALt x))
     let GreaterOrEqualParse = binop (pstring ">=") AtomParse AtomParse |>> fun x -> Not (ALt x)
     let LessOrEqualParse    = binop (pstring "<=") AtomParse AtomParse |>> fun x -> Not (Conj ((Not (ALt x)), Not (Not (Not (AEq x)))))
-    do bpref := choice [PrrParse; NotParse; LessOrEqualParse; TrueParse; FalseParse; EqualParse; NotEqualParse; LessParse; GreaterParse; GreaterOrEqualParse; ConParse; DisParse]
+    do bpref := choice [LessOrEqualParse; EqualParse; NotEqualParse; LessParse; GreaterParse; GreaterOrEqualParse; BAtomParse]
 
+    
+    do baref := choice [NotParse; TrueParse; FalseParse; PrrParse;]
+    
     let BexpParse = BTermParse
 
     let StmTermParse, stmref = createParserForwardedToRef<stm>()
@@ -116,19 +123,21 @@
     let SeqParse = binop (many whitespaceChar >>. pchar ';' .>> many whitespaceChar) StmProdParse StmTermParse |>> Seq
     do stmref := choice [SeqParse; StmProdParse] 
 
+    let helper1 t s p = (((((many whitespaceChar >>. t) .>> spaces) >>. s) .>> spaces) .>> p) .>> spaces
+    let helper2 = (((pchar '{' .>> many whitespaceChar) >>. StmTermParse) .>> many whitespaceChar) .>> pchar '}'
+
     let SkipParse  = pstring "" |>> fun _ -> Skip
-    let ITParse    = ((((((((((many whitespaceChar >>. pif) .>> spaces) >>. BProdParse) .>> spaces) .>> pthen) .>> spaces ) .>> pchar '{') .>> many whitespaceChar .>>. StmTermParse) .>> many whitespaceChar) .>> pchar '}') .>> many whitespaceChar .>>. SkipParse |>> fun ((x, y), z) -> ITE (x, y, z)
-    let ITEParse   = ((((((((((((((many whitespaceChar >>. pif) .>> spaces) >>. BProdParse) .>> spaces) .>> pthen) .>> spaces) .>> pchar '{') .>> many whitespaceChar .>>. StmTermParse) .>> many whitespaceChar) .>> pchar '}') .>> many whitespaceChar) .>> pelse) .>> spaces) .>> pchar '{') .>> spaces .>>. StmTermParse .>> spaces .>> pchar '}' |>> fun ((x, y), z) -> ITE (x, y, z)
-    let WhileParse = ((((((((many whitespaceChar >>. pwhile) .>> spaces) >>. BProdParse) .>> spaces) .>> pdo) .>> spaces) .>> pchar '{') .>> many whitespaceChar .>>. StmTermParse) .>> many whitespaceChar .>> pchar '}' |>> While
+    let ITParse    = helper1 pif BTermParse pthen .>>. helper2 .>> many whitespaceChar .>>. SkipParse |>> fun ((x, y), z) -> ITE (x, y, z)
+    let ITEParse   = helper1 pif BTermParse pthen .>>. helper2 .>> many whitespaceChar .>> pelse .>> spaces .>> pchar '{' .>> spaces .>>. StmTermParse .>> spaces .>> pchar '}' |>> fun ((x, y), z) -> ITE (x, y, z)
+    let WhileParse = helper1 pwhile BProdParse pdo .>>. helper2 |>> While
     do stmpref := choice [ITEParse; ITParse; WhileParse; StmAtomParse;] 
 
     let AssParse     = (((many whitespaceChar >>. pid .>> many whitespaceChar) .>> pstring ":=") .>> spaces) .>>. TermParse |>> fun (x, y) -> Ass (string x, y)
     let DeclareParse = many whitespaceChar .>> pdeclare .>> spaces1 >>. pid |>> Declare
-    do stmaref := choice [DeclareParse; AssParse;] 
+    let PrrrParse    = parenthesise StmTermParse
+    do stmaref := choice [DeclareParse; AssParse] 
 
     let stmntParse = StmTermParse
-
-
 
 (* These five types will move out of this file once you start working on the project *)
     type coord      = int * int
